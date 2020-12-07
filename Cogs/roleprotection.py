@@ -16,13 +16,12 @@ class RoleProtection(commands.Cog):
 
         # First, check if their first role is higher than mods (ie: admin), or the role being changes is out of their reach anyway
         # Also, if role is below mod role, assume it SHOULDN'T have these perms
-        if self.mod_role < member.roles[0] or after > self.mod_role or member.id == after.guild.owner_id: ## For you Ziq <3:
+        if self.mod_role < member.roles[0] or after > self.mod_role:## or member.id == after.guild.owner_id: ## For you Ziq <3:
             return 0 
             
-        logger.CRITICAL("{0} Changing Permission for {0}. Demodding them and reverting".format(str(member), str(after)))
-        await after.edit(permissions=before.permissions, reason="{0} Attempted to change permissions, I'll be demodding them".format(str(member)))
+        logger.CRITICAL("{0} Changing Permission for {1}. Demodding them and reverting".format(str(member), str(after)))
+        await after.edit(permissions=before.permissions,mentionable=before.mentionable, reason="{0} Attempted to change permissions, I'll be demodding them".format(str(member)))
         new_roles = member.roles
-        print(new_roles)
         if self.mod_role not in new_roles:
             logger.GENERAL("User doesn't appear to have the mod role...")
             return 1
@@ -32,19 +31,25 @@ class RoleProtection(commands.Cog):
         
     async def get_user_from_audits(self, before, after):
         member = None
+        fetch = False
         async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_update): # Checks last 5 Audit logs for a user updating this role.
             try:
                 if entry.after.permissions == after.permissions:
-                    ## We got (((our guy)))
-                    ## Unless it was the bot.
-                    if entry.user.id != self.client.user.id:
-                        member = await after.guild.fetch_member(entry.user.id) #Member is not user.
-                        return member
-                    else:
-                        return 1
+                   fetch = True
             except AttributeError as e:
-                logger.GENERAL("Role was changed, but no permissions changed")
-        return None
+                #logger.GENERAL("Role was changed, but no permissions changed {0}".format(e))
+                if before.mentionable != after.mentionable:
+                    fetch = True
+             ## We got (((our guy)))
+                    ## Unless it was the bot.
+            if fetch:
+                if entry.user.id != self.client.user.id:
+                    member = await after.guild.fetch_member(entry.user.id) #Member is not user.
+                    return member
+                return 1
+            else:
+                return 1 
+    
             
         
     @commands.Cog.listener()
@@ -53,7 +58,7 @@ class RoleProtection(commands.Cog):
             self.mod_role = discord.utils.get(after.guild.roles, id=MOD_ROLE)
         member = await self.get_user_from_audits(before, after)
         if member == None:
-            await after.edit(permissions=before.permissions, reason="Wee woo, {0} Was changed, but I ran into an error so I'm changing it back. Please report to Ziq".format(str(after)))
+            await after.edit(permissions=before.permissions, mentionable=before.mentionable, reason="Wee woo, {0} Was changed, but I ran into an error so I'm changing it back. Please report to Ziq".format(str(after)))
             logger.CRITICAL("Wee woo, {0} Was changed, but I ran into an error so I'm changing it back. Please report to Ziq".format(str(after)))
             return
         elif member == 1: ## It's just the bot, don't need to do anything
@@ -64,6 +69,7 @@ class RoleProtection(commands.Cog):
             logger.CRITICAL("User mentioned above successfully demodded, and changes reverted")
             return
         logger.DEBUG("Role being updated, but was done by an admin")
+        
         return 
         
 def setup(client):
