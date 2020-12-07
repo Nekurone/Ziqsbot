@@ -18,21 +18,17 @@ class RoleProtection(commands.Cog):
         # Also, if role is below mod role, assume it SHOULDN'T have these perms
         if self.mod_role < member.roles[0] or after > self.mod_role or member.id == after.guild.owner_id: ## For you Ziq <3:
             return 0 
-        if (   
-           after.permissions.ban_members == True or after.permissions.manage_channels  == True or
-           after.permissions.manage_roles == True or after.permissions.kick_members  == True
-           ):
-                
-            logger.CRITICAL("{0} Changing Permission for {0}. Demodding them and reverting".format(str(member), str(after)))
-            await after.edit(permissions=before.permissions, reason="{0} Attempted to change permissions, I'll be demodding them".format(str(member)))
-            new_roles = member.roles
-            print(new_roles)
-            if self.mod_role not in new_roles:
-                logger.GENERAL("User doesn't appear to have the mod role...")
-                return 1
-            new_roles.remove(self.mod_role) ## I hate that this is the best way to do this.
-            await member.edit(roles=new_roles, reason="Messing with the balance of nature.")
+            
+        logger.CRITICAL("{0} Changing Permission for {0}. Demodding them and reverting".format(str(member), str(after)))
+        await after.edit(permissions=before.permissions, reason="{0} Attempted to change permissions, I'll be demodding them".format(str(member)))
+        new_roles = member.roles
+        print(new_roles)
+        if self.mod_role not in new_roles:
+            logger.GENERAL("User doesn't appear to have the mod role...")
             return 1
+        new_roles.remove(self.mod_role) ## I hate that this is the best way to do this.
+        await member.edit(roles=new_roles, reason="Messing with the balance of nature.")
+        return 1
         
     async def get_user_from_audits(self, before, after):
         member = None
